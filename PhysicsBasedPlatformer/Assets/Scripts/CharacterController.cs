@@ -26,7 +26,9 @@ public class CharacterController : MonoBehaviour
 
     private Rigidbody2D rb;
     private Vector2 moveInput;
-    private bool isGrounded;
+    public bool isGrounded;
+    public bool movingRight => moveInput.x > 0.01f;
+    public bool isFacingRight => transform.localScale.x > 0;
 
     void Start()
     {
@@ -63,6 +65,16 @@ public class CharacterController : MonoBehaviour
         {
             rb.gravityScale = 1f;
         }
+
+        // make the character face the right way
+        if (movingRight)
+        {
+            transform.localScale = new Vector3(0.3f, 0.3f, 0.3f); 
+        }
+        else if (moveInput.x < -0.01f)
+        {
+            transform.localScale = new Vector3(-0.3f, 0.3f, 0.3f); 
+        }
     }
 
     private void FixedUpdate()
@@ -97,7 +109,6 @@ public class CharacterController : MonoBehaviour
 
     private void OnJumpPerformed(InputAction.CallbackContext context)
     {
-        // context.ReadValue<Vector2>().y > 0 ensures we only jump on 'Up' or 'W'
         if (isGrounded && context.ReadValue<Vector2>().y > 0.5f)
         {
             Jump();
@@ -106,7 +117,6 @@ public class CharacterController : MonoBehaviour
 
     private void Jump()
     {
-        // Reset Y velocity so double-taps don't compound strangely
         rb.linearVelocity = new Vector2(rb.linearVelocity.x, 0f);
         rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
         isGrounded = false;
