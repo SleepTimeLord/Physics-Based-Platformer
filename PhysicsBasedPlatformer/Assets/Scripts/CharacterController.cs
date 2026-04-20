@@ -16,24 +16,26 @@ public class CharacterController : MonoBehaviour
     [Tooltip("The force used to stop the character when no input is given.")]
     public float groundDeceleration = 40f;
     public float horizontalSpeed = 0f;
-    
 
     [Header("Vertical Movement")]
     public float jumpForce = 14f;
-    public float fallMultiplier = 3f; // For a heavier, realistic fall
-    public float lowJumpMultiplier = 2.5f; // For variable jump height
+    public float fallMultiplier = 3f;
+    public float lowJumpMultiplier = 2.5f;
     public float verticalSpeed = 0f;
+    [Header("Animation")]
+    private Animator animator;
 
     private Rigidbody2D rb;
+    private SpriteRenderer spriteRenderer;
     private Vector2 moveInput;
     public bool isGrounded;
     public bool movingRight => moveInput.x > 0.01f;
-    public bool isFacingRight => transform.localScale.x > 0;
 
     void Start()
     {
+        animator = GetComponent<Animator>();
         rb = GetComponent<Rigidbody2D>();
-        // Realistic physics tip: Ensure 'Interpolate' is on in the Rigidbody2D inspector!
+        spriteRenderer = GetComponent<SpriteRenderer>();
     }
 
     void OnEnable()
@@ -51,7 +53,7 @@ public class CharacterController : MonoBehaviour
     void Update()
     {
         moveInput = playerMovement.ReadValue<Vector2>();
-        
+
         // Better Falling Physics
         if (rb.linearVelocity.y < 0)
         {
@@ -66,14 +68,13 @@ public class CharacterController : MonoBehaviour
             rb.gravityScale = 1f;
         }
 
-        // make the character face the right way
-        if (movingRight)
+        if (moveInput.x > 0.01f)
         {
-            transform.localScale = new Vector3(0.3f, 0.3f, 0.3f); 
+            spriteRenderer.flipX = false; // facing right
         }
         else if (moveInput.x < -0.01f)
         {
-            transform.localScale = new Vector3(-0.3f, 0.3f, 0.3f); 
+            spriteRenderer.flipX = true; // facing left
         }
     }
 
@@ -82,26 +83,56 @@ public class CharacterController : MonoBehaviour
         ApplyRealisticMovement();
         verticalSpeed = rb.linearVelocity.y;
         horizontalSpeed = rb.linearVelocity.x;
+
+        // animator parameters
+        if (horizontalSpeed > 0.1f || horizontalSpeed < -0.1f)
+        {
+            animator.SetBool("isRunning", true);
+        }
+        else
+        {
+            animator.SetBool("isRunning", false);
+        }
+
+        if (verticalSpeed > 0.1f)
+        {
+            animator.SetBool("isJumping", true);
+            animator.SetBool("isFalling", false);
+        }
+        else if (verticalSpeed < -0.1f)
+        {
+            animator.SetBool("isJumping", false);
+            animator.SetBool("isFalling", true);
+        }
+        else
+        {
+            animator.SetBool("isJumping", false);
+            animator.SetBool("isFalling", false);
+        }
+
+        if (isGrounded)
+        {
+            animator.SetBool("isGrounded", true);
+        }
+        else
+        {
+            animator.SetBool("isGrounded", false);
+        }
     }
 
     private void ApplyRealisticMovement()
     {
-        // Determine which acceleration to use 
         float currentAccel = (Mathf.Abs(rb.linearVelocity.x) < 0.1f) ? startAcceleration : runAcceleration;
 
-        // Apply Horizontal Force
         if (Mathf.Abs(moveInput.x) > 0.01f)
         {
-            // Only add force if we are below maxSpeed or trying to turn around
             if (Mathf.Abs(rb.linearVelocity.x) < maxSpeed || Mathf.Sign(moveInput.x) != Mathf.Sign(rb.linearVelocity.x))
             {
                 rb.AddForce(Vector2.right * moveInput.x * currentAccel, ForceMode2D.Force);
             }
         }
-        // Friction
         else if (isGrounded)
         {
-            // Apply a counter-force to simulate feet gripping the ground
             float slowdown = Mathf.MoveTowards(rb.linearVelocity.x, 0, groundDeceleration * Time.fixedDeltaTime);
             rb.linearVelocity = new Vector2(slowdown, rb.linearVelocity.y);
         }
@@ -122,10 +153,29 @@ public class CharacterController : MonoBehaviour
         isGrounded = false;
     }
 
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision.gameObject.CompareTag("Robot"))
+        {
+            isGrounded = true;
+            transform.SetParent(collision.gameObject.transform, true);
+        }
+
+        if (collision.gameObject.CompareTag("Death"))
+        {
+            Debug.Log($"Collided with death object: {collision.gameObject.name}, resetting level.");
+            GameManager.Instance.ResetLevel();
+        }
+
+        if (collision. gameObject.CompareTag("NextLevel"))
+        {
+            GameManager.Instance.NextLevel();
+        }
+    }
+
     private void OnCollisionStay2D(Collision2D collision)
     {
-        // Using Stay is safer for "Surface" tags to ensure isGrounded remains true while standing
-        if (collision.gameObject.CompareTag("Ground"))
+        if (collision.gameObject.CompareTag("Ground") || collision.gameObject.CompareTag("Robot"))
         {
             isGrounded = true;
         }
@@ -133,9 +183,14 @@ public class CharacterController : MonoBehaviour
 
     private void OnCollisionExit2D(Collision2D collision)
     {
-        if (collision.gameObject.CompareTag("Ground"))
+        if (collision.gameObject.CompareTag("Ground") || collision.gameObject.CompareTag("Robot"))
         {
             isGrounded = false;
+        }
+
+        if (collision.gameObject.CompareTag("Robot"))
+        {
+            transform.SetParent(null);
         }
     }
 }

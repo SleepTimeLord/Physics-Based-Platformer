@@ -6,14 +6,18 @@ TagManager:
   tags:
   - Surface
   - Ground
+  - Robot
+  - Death
+  - NextLevel
+  - Button
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - Obstacle
   - Water
   - UI
-  - 
+  - Death
   - 
   - 
   - 
@@ -43,5 +47,15 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
+  - name: eye
+    uniqueID: 1266221063
+    locked: 0
+  - name: wall
+    uniqueID: 3780403767
+    locked: 0
+  - name: forground
+    uniqueID: 168883667
+    locked: 0
   m_RenderingLayers:
   - Default
+  m_MigratedRenderPipelines: []
